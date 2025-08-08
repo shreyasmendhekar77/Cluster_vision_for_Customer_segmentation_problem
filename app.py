@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
-
+from  data_preprocessing import clean_data, columns_encode
 # Title
 st.title("CSV Upload and Graph Display")
 
@@ -18,12 +18,16 @@ if uploaded_file is not None:
     Features=df.columns.to_list()
     st.write("Select the Features for the clustring")
     feature_list=st.multiselect("Select the features for performing the clustring ",Features)
-    st.write("Your selected features are - ")
-    for feature in feature_list:
-        st.write(feature)
+    # st.write("Your selected features are - ")
+    # for feature in feature_list:
+    #     st.write(feature)
     print(feature_list)
-    st.button("Perform Clustering")
+    if st.button("Clean and Encode Data"):
+        clean_data(feature_list,df)
+        columns_encode(feature_list,df)
+        st.dataframe(df.head())
     
+
 
     # # Dropdowns for selecting columns
     # columns = df.columns.tolist()
@@ -38,3 +42,8 @@ if uploaded_file is not None:
     # ax.set_ylabel(y_col)
     # ax.set_title(f"{y_col} vs {x_col}")
     # st.pyplot(fig)
+
+
+
+
+# 
