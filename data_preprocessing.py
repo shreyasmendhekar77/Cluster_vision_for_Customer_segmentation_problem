@@ -11,6 +11,7 @@
 
 #  Outpur should be a dataframe and input should be the columns and input dataframe...
 from sklearn.preprocessing import LabelEncoder,StandardScaler
+from sklearn.decomposition import PCA
 import pandas as pd
 le=LabelEncoder()
 
@@ -38,6 +39,12 @@ def standard_data(data):
     # data=data[column_list]
     x_std=std.fit_transform(data)
     return x_std
+
+
+def pca(data,component):
+    feature=PCA(n_components=component)
+    return feature.fit_transform(data)
+    
 
 
 

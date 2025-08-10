@@ -1,9 +1,10 @@
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
-from  data_preprocessing import clean_data, columns_encode ,standard_data
-from model_building_and_clustring import Elbow_method
+from  data_preprocessing import clean_data, columns_encode ,standard_data,pca
+from model_building_and_clustring import Elbow_method,k_means_cluster
 from sklearn.decomposition import PCA
+import plotly.express as px
 from sklearn.cluster import KMeans
 import matplotlib.pylab as plt
 # Title
@@ -15,6 +16,7 @@ uploaded_file = st.file_uploader("Upload your CSV file", type=['csv'])
 if uploaded_file is not None:
     # Read file
     df = pd.read_csv(uploaded_file)
+    final_data=df
     
     st.write("### Preview of the Data")
     st.dataframe(df.head())
@@ -56,14 +58,60 @@ if uploaded_file is not None:
 
 
 
-
-    if st.button("Apply clustring "):
-        st.write("Applying clustring")
-
-
+    k_value = st.text_input("The K- value you want to try - ")
+    if st.button("Apply clustering"):
+        df = clean_data(feature_list, df)
+        df = columns_encode(feature_list, df)
+        X_std = standard_data(df)
+        df = k_means_cluster(df, X_std, int(k_value))
+        st.session_state.df = df
+        st.session_state.X_std = X_std
+        final_data['clusters']=st.session_state.df['clusters']
+        st.session_state.final_data = final_data
+        st.dataframe(df.head())
 
     if st.button("Visualize Clusters"):
-        st.write("Part to be coded")
+        if "df" in st.session_state and "X_std" in st.session_state:
+            x_pca = pca(st.session_state.X_std, 3)
+
+            Features = pd.DataFrame(x_pca, columns=['f1', 'f2', 'f3'])
+            Features['cluster'] = st.session_state.df['clusters']
+            st.dataframe(Features.head(2))
+
+            fig = px.scatter_3d(
+                Features,
+                x='f1', y='f2', z='f3',
+                color=Features['cluster'].astype(str),
+                title='KMeans Clusters (3D PCA Reduced)',
+                opacity=0.75,
+                symbol=Features['cluster'].astype(str),
+                hover_data=['f1', 'f2', 'f3', 'cluster']
+            )
+            fig.update_traces(marker=dict(size=5))
+            st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.warning("Please apply clustering first!")
+    
+   
+    csv =st.session_state.final_data.to_csv(index=False).encode('utf-8')
+    st.download_button("📥 Download Clustered Data", csv, "clusters.csv", "text/csv")
+    
+    # final=df['cluster']
+
+    
+
+
+
+ 
+        
+         
+        
+
+
+
+
+
+        
 
 
 
