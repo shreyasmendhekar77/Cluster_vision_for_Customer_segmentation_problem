@@ -10,7 +10,7 @@
 
 
 #  Outpur should be a dataframe and input should be the columns and input dataframe...
-from sklearn.preprocessing import LabelEncoder
+from sklearn.preprocessing import LabelEncoder,StandardScaler
 import pandas as pd
 le=LabelEncoder()
 
@@ -18,6 +18,8 @@ def clean_data(colum_list:list,data):
     for i in colum_list:
         if int(data[i].isna().sum())!=0:
             data[i]=data[i].fillna(data[i].mode)
+    
+    return data
 
 
 def columns_encode(column_list:list,data):
@@ -26,7 +28,16 @@ def columns_encode(column_list:list,data):
             le = LabelEncoder()
             data[i] = le.fit_transform(data[i].astype(str))
             print(f"Encoded column: {i}")
-
-
-
     
+    return data
+
+
+
+def standard_data(data):
+    std=StandardScaler()
+    # data=data[column_list]
+    x_std=std.fit_transform(data)
+    return x_std
+
+
+
