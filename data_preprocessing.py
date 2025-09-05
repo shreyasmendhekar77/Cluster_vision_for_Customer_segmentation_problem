@@ -17,8 +17,10 @@ le=LabelEncoder()
 
 def clean_data(colum_list:list,data):
     for i in colum_list:
-        if int(data[i].isna().sum())!=0:
+        if int(data[i].isna().sum())!=0 and not pd.api.types.is_numeric_dtype(data[i]):
             data[i]=data[i].fillna(data[i].mode)
+        elif int(data[i].isna().sum())!=0:
+            data[i]=data[i].fillna(data[i].mean())
     
     return data
 
