@@ -1,270 +1,214 @@
-# import streamlit as st
-# import pandas as pd
-# import matplotlib.pyplot as plt
-# from  data_preprocessing import clean_data, columns_encode ,standard_data,pca
-# from model_building_and_clustring import Elbow_method,k_means_cluster,sillhouette_score
-# from sklearn.decomposition import PCA
-# import plotly.express as px
-# from sklearn.cluster import KMeans
-# import matplotlib.pylab as plt
-# # Title
-# st.title("CSV Upload and Graph Display")
-
-# # Upload CSV
-# uploaded_file = st.file_uploader("Upload your CSV file", type=['csv'])
-
-# if uploaded_file is not None:
-#     # Read file
-#     df = pd.read_csv(uploaded_file)
-#     final_data=df
-    
-#     st.write("### Preview of the Data")
-#     st.dataframe(df.head())
-
-#     Features=df.columns.to_list()
-#     st.write("Select the Features for the clustring")
-#     feature_list=st.multiselect("Select the features for performing the clustring ",Features)
-#     # st.write("Your selected features are - ")
-#     # for feature in feature_list:
-#     #     st.write(feature)
-#     df=df[feature_list]
-#     print(feature_list)
-#     if st.button("Clean and Encode Data"):
-#         # df=clean_data(feature_list,df)
-#         # df=columns_encode(feature_list,df)
-#         # st.dataframe(df.head())
-#         # st.write(X_std[0])
-#         pass
-
-#     st.dataframe(df.head())
-    
-#     # if st.button("Find k with elbow method"):s
-#     k = st.slider("Select Number of Clusters (k)", min_value=1, max_value=20, value=3)
-#     st.write("Selected number of clusters:", k)
-#     if st.button("Elbow Method"):
-#         df=clean_data(feature_list,df)
-#         df=columns_encode(feature_list,df)
-#         st.dataframe(df.head())
-#         # st.dataframe(df.head())
-#         X_std=standard_data(df)
-#         wcss=Elbow_method(X_std,k)
-#         # Plot the graph
-#         plt.plot(range(2,k),wcss,marker='o')
-#         plt.xlabel("Number of clusters")
-#         plt.ylabel("Within Cluster Sum of Square")
-#         plt.title("K-value vs WCSS")
-#         # plt.show()
-#         st.pyplot(plt)
-    
-#     if st.button("Silhouette Score"):
-#         df=clean_data(feature_list,df)
-#         df=columns_encode(feature_list,df)
-#         st.dataframe(df.head())
-#         # st.dataframe(df.head())
-#         X_std=standard_data(df)
-#         Sill_Score=sillhouette_score(X_std,k)
-#         # Plot the graph
-#         plt.plot(range(2,k),Sill_Score,marker='o')
-#         plt.xlabel("Number of clusters")
-#         plt.ylabel("Sillhoutte Score")
-#         plt.title("K-value vs Sillhoutte Score")
-#         # plt.show()
-#         st.pyplot(plt)
-
-
-
-#     k_value = st.text_input("The K- value you want to try - ")
-#     if st.button("Apply clustering"):
-#         df = clean_data(feature_list, df)
-#         df = columns_encode(feature_list, df)
-#         X_std = standard_data(df)
-#         df = k_means_cluster(df, X_std, int(k_value))
-#         st.session_state.df = df
-#         st.session_state.X_std = X_std
-#         final_data['clusters']=st.session_state.df['clusters']
-#         st.session_state.final_data = final_data
-#         st.dataframe(df.head())
-
-#     if st.button("Visualize Clusters"):
-#         if "df" in st.session_state and "X_std" in st.session_state:
-#             x_pca = pca(st.session_state.X_std, 3)
-
-#             Features = pd.DataFrame(x_pca, columns=['f1', 'f2', 'f3'])
-#             Features['cluster'] = st.session_state.df['clusters']
-#             st.dataframe(Features.head(2))
-
-#             fig = px.scatter_3d(
-#                 Features,
-#                 x='f1', y='f2', z='f3',
-#                 color=Features['cluster'].astype(str),
-#                 title='KMeans Clusters (3D PCA Reduced)',
-#                 opacity=0.75,
-#                 symbol=Features['cluster'].astype(str),
-#                 hover_data=['f1', 'f2', 'f3', 'cluster']
-#             )
-#             fig.update_traces(marker=dict(size=5))
-#             st.plotly_chart(fig, use_container_width=True)
-#         else:
-#             st.warning("Please apply clustering first!")
-    
-   
-#     csv =st.session_state.final_data.to_csv(index=False).encode('utf-8')
-#     st.download_button("📥 Download Clustered Data", csv, "clusters.csv", "text/csv")
-    
-#     # final=df['cluster']
-
-    
-
-
-
- 
-        
-         
-        
-
-
-
-
-
-        
-
-
-
-
-
-
-# # # 
-
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
+import io
 import plotly.express as px
 from data_preprocessing import clean_data, columns_encode, standard_data, pca
-from model_building_and_clustring import Elbow_method, k_means_cluster
+from model_building_and_clustring import Elbow_method, k_means_cluster, sillhouette_score
+from sklearn.exceptions import ConvergenceWarning
+import warnings
 
-# Page configuration: wide layout helps centering in the middle column
-st.set_page_config(page_title="CSV Upload and Graph Display", layout="wide")
+# Title
+st.title("Cluster Vision")
 
-# Initialize session state
-if "df_orig" not in st.session_state: st.session_state.df_orig = None
-if "df_features" not in st.session_state: st.session_state.df_features = None
-if "X_std" not in st.session_state: st.session_state.X_std = None
-if "final_data" not in st.session_state: st.session_state.final_data = None
-if "clustered" not in st.session_state: st.session_state.clustered = None
-if "k" not in st.session_state: st.session_state.k = 3
-if "feature_list" not in st.session_state: st.session_state.feature_list = None
-if "uploader_used" not in st.session_state: st.session_state.uploader_used = False
+# ---------------- Sidebar ----------------
+st.sidebar.header("⚙️ Clustering Controls")
+uploaded_file = st.sidebar.file_uploader("Upload CSV File", type=['csv'])
 
-# Left UI (controls)
-with st.sidebar:
-    st.header("Controls")
+# Init session flags
+for key in ["show_elbow", "show_silhouette", "show_clusters"]:
+    if key not in st.session_state:
+        st.session_state[key] = False
 
-    uploaded_file = st.file_uploader("Upload your CSV file", type=['csv'], key="uploader")
-    if uploaded_file is not None:
-        st.session_state.uploader_used = True
-        if st.session_state.df_orig is not None:
-            st.session_state.df_orig = pd.read_csv(uploaded_file)
+# Initialize session state for data preview visibility
+if "show_data_preview" not in st.session_state:
+    st.session_state.show_data_preview = True
 
-    if st.session_state.df_orig is not None:
-        all_features = st.session_state.df_orig.columns.tolist()
-        feature_list = st.multiselect("Features for clustering", all_features, key="feature_list")
-        if feature_list:
-            st.session_state.feature_list = feature_list
+if uploaded_file is not None:
+    try:
+        df = pd.read_csv(uploaded_file)
+        if df.empty:
+            st.error("❌ The uploaded CSV file is empty. Please upload a valid non-empty file.")
+            st.stop()
+    except Exception as e:
+        st.error(f"❌ Failed to read file: {e}")
+        st.stop()
 
-    # Prepare data
-    if (st.session_state.df_orig is not None) and (st.session_state.feature_list is not None):
-        if st.button("Prepare Data"):
-            df = st.session_state.df_orig[st.session_state.feature_list]
-            df_clean = clean_data(st.session_state.feature_list, df)
-            df_enc = columns_encode(st.session_state.feature_list, df_clean)
-            X_std = standard_data(df_enc)
+    final_data = df.copy()
 
-            st.session_state.df_features = df_enc
-            st.session_state.X_std = X_std
-            st.session_state.final_data = None
-            st.session_state.clustered = None
-            st.success("Data prepared. You can run Elbow Method or clustering.")
+    st.sidebar.subheader("🔎 Feature Selection")
+    Features = df.columns.to_list()
+    feature_list = st.sidebar.multiselect("Select features for clustering", Features)
 
-    st.markdown("---")
+    if feature_list:
+        st.session_state.show_data_preview = False
 
-    # Elbow Method options
-    if st.session_state.X_std is not None:
-        k = st.slider("Number of Clusters (k)", 1, 20, value=st.session_state.k, key="k_slider")
-        st.session_state.k = k
+    st.sidebar.subheader("📌 Clustering Parameters")
+    k = st.sidebar.slider("Select Max Number of Clusters (for evaluation)", 2, 20, 5)
 
-        if st.button("Elbow Method"):
-            wcss = Elbow_method(st.session_state.X_std, int(st.session_state.k))
-            fig, ax = plt.subplots()
-            ax.plot(range(2, int(st.session_state.k) + 1), wcss, marker='o')
-            ax.set_xlabel("Number of clusters")
-            ax.set_ylabel("WCSS")
-            ax.set_title("K-value vs WCSS")
-            st.pyplot(fig)
+    # ---------------- Main Area ----------------
+    if st.session_state.show_data_preview:
+        st.subheader("👀 Data Preview")
+        st.dataframe(df.head())
 
-        # Apply clustering
-        st.markdown("---")
-        if st.button("Apply clustering"):
-            if st.session_state.df_features is not None and st.session_state.X_std is not None:
-                df_clustered = k_means_cluster(st.session_state.df_features, st.session_state.X_std, int(st.session_state.k))
-                st.session_state.clustered = df_clustered
-                # Attach clusters to original data (if possible)
-                if isinstance(st.session_state.df_orig, pd.DataFrame) and "clusters" in df_clustered.columns:
-                    final = st.session_state.df_orig.copy()
-                    final = final.assign(clusters=df_clustered["clusters"].values)
-                    st.session_state.final_data = final
+    if feature_list:
+        # Ensure selected features are numeric
+        # if not all(pd.api.types.is_numeric_dtype(df[col]) for col in feature_list):
+        #     st.error("⚠️ Selected features must be numeric. Please select numeric columns only.")
+        #     st.stop()
+
+        df = df[feature_list]
+
+        # --------- Elbow Method ---------
+        if st.sidebar.button("📉 Show Elbow Method"):
+            st.session_state.show_elbow = True
+        if st.session_state.show_elbow:
+            try:
+                df_clean = clean_data(feature_list, df)
+                df_encoded = columns_encode(feature_list, df_clean)
+                X_std = standard_data(df_encoded)
+                wcss = Elbow_method(X_std, k)
+
+                fig, ax = plt.subplots()
+                ax.plot(range(2, k), wcss, marker='o')
+                ax.set_xlabel("Number of clusters")
+                ax.set_ylabel("WCSS")
+                ax.set_title("Elbow Method")
+
+                st.subheader("📉 Elbow Method Plot")
+                st.pyplot(fig)
+
+                buf = io.BytesIO()
+                fig.savefig(buf, format="png")
+                st.download_button("⬇️ Download Elbow Plot", buf.getvalue(),
+                                   file_name="elbow_method.png", mime="image/png")
+
+                if st.button("❌ Hide Elbow Plot"):
+                    st.session_state.show_elbow = False
+            except Exception as e:
+                st.error(f"❌ Elbow Method failed: {e}")
+
+        # --------- Silhouette Score ---------
+        if st.sidebar.button("📈 Show Silhouette Score"):
+            st.session_state.show_silhouette = True
+        if st.session_state.show_silhouette:
+            try:
+                df_clean = clean_data(feature_list, df)
+                df_encoded = columns_encode(feature_list, df_clean)
+                X_std = standard_data(df_encoded)
+                sill_scores = sillhouette_score(X_std, k)
+
+                fig, ax = plt.subplots()
+                ax.plot(range(2, k), sill_scores, marker='o')
+                ax.set_xlabel("Number of clusters")
+                ax.set_ylabel("Silhouette Score")
+                ax.set_title("Silhouette Score Analysis")
+
+                st.subheader("📈 Silhouette Score Plot")
+                st.pyplot(fig)
+
+                buf = io.BytesIO()
+                fig.savefig(buf, format="png")
+                st.download_button("⬇️ Download Silhouette Plot", buf.getvalue(),
+                                   file_name="silhouette_score.png", mime="image/png")
+
+                if st.button("❌ Hide Silhouette Plot"):
+                    st.session_state.show_silhouette = False
+            except Exception as e:
+                st.error(f"❌ Silhouette Score plotting failed: {e}")
+
+        k_value = st.sidebar.text_input("K-value for clustering", "3")
+
+        # --------- Clustering ---------
+        if st.sidebar.button("🚀 Apply Clustering"):
+            try:
+                df_clean = clean_data(feature_list, df)
+                df_encoded = columns_encode(feature_list, df_clean)
+                X_std = standard_data(df_encoded)
+
+                with warnings.catch_warnings():
+                    warnings.filterwarnings('error', category=ConvergenceWarning)
+                    clustered_df = k_means_cluster(df_encoded, X_std, int(k_value))
+
+                final_data['clusters'] = clustered_df['clusters']
+                st.session_state.df = clustered_df
+                st.session_state.X_std = X_std
+                st.session_state.final_data = final_data
+
+                st.subheader("✅ Clustered Data Preview")
+                st.dataframe(clustered_df.head())
+
+            except ConvergenceWarning:
+                st.error("❌ K-Means did not converge. Try adjusting 'k' or preprocessing the data.")
+            except Exception as e:
+                st.error(f"❌ Clustering failed: {e}")
+
+        # --------- Cluster Visualization ---------
+        if st.sidebar.button("🎨 Show 2D/3D Cluster Visualization"):
+             st.session_state.show_clusters = True
+
+        if st.session_state.show_clusters:
+            try:
+                if "df" in st.session_state and "X_std" in st.session_state:
+                    n_features = len(feature_list)
+
+                    if n_features == 2:
+                        # 2D Scatter plot
+                        df_clean = clean_data(feature_list, df)
+                        df_encoded = columns_encode(feature_list, df_clean)
+                        X_std = standard_data(df_encoded)
+                        Features_2d = pd.DataFrame(X_std, columns=['f1', 'f2'])
+                        Features_2d['cluster'] = st.session_state.df['clusters']
+
+                        st.subheader("📊 2D Cluster Visualization")
+                        fig, ax = plt.subplots()
+                        scatter = ax.scatter(
+                            Features_2d['f1'], Features_2d['f2'],
+                            c=Features_2d['cluster'], cmap='viridis', alpha=0.8
+                        )
+                        ax.set_xlabel('Feature 1')
+                        ax.set_ylabel('Feature 2')
+                        ax.set_title('2D KMeans Cluster Visualization')
+                        legend1 = ax.legend(*scatter.legend_elements(), title="Clusters")
+                        ax.add_artist(legend1)
+                        st.pyplot(fig)
+
+                    elif n_features > 2:
+                        # 3D PCA Scatter plot
+                        x_pca = pca(st.session_state.X_std, 3)
+                        Features_pca = pd.DataFrame(x_pca, columns=['f1', 'f2', 'f3'])
+                        Features_pca['cluster'] = st.session_state.df['clusters']
+
+                        st.subheader("🎨 3D Cluster Visualization")
+                        fig = px.scatter_3d(
+                            Features_pca,
+                            x='f1', y='f2', z='f3',
+                            color=Features_pca['cluster'].astype(str),
+                            symbol=Features_pca['cluster'].astype(str),
+                            title='KMeans Clusters (3D PCA Reduced)',
+                            opacity=0.8
+                        )
+                        fig.update_traces(marker=dict(size=5))
+                        st.plotly_chart(fig, use_container_width=True)
+
+                    else:
+                        st.warning("⚠️ At least 2 features are needed for visualization.")
+
+                    if st.button("❌ Hide Cluster Plot"):
+                        st.session_state.show_clusters = False
                 else:
-                    st.session_state.final_data = df_clustered
-                st.success("Clustering applied.")
+                    st.warning("⚠️ Please apply clustering first.")
+            except Exception as e:
+                st.error(f"❌ Visualization failed: {e}")
 
-        st.markdown("---")
+        # --------- Download Data ---------
+        try:
+            if "final_data" in st.session_state:
+                csv = st.session_state.final_data.to_csv(index=False).encode('utf-8')
+                st.subheader("⬇️ Download Clustered Data")
+                st.download_button("📥 Download CSV", csv, "clusters.csv", "text/csv")
+        except Exception as e:
+            st.error(f"❌ Failed to export data: {e}. Please retry.")
 
-        # Visualization (optional, if clustering done)
-        if st.session_state.clustered is not None:
-            st.write("Visualization will appear in the main area.")
-
-    # Download
-    if st.session_state.final_data is not None:
-        csv = st.session_state.final_data.to_csv(index=False).encode('utf-8')
-        st.download_button("Download Clusters", csv, "clusters.csv", "text/csv")
-
-# Center/main area
-center_col1, center_col2, _ = st.columns([1, 2, 1])  # center content
-with center_col2:
-    st.title("Output")
-
-    if not st.session_state.uploader_used or st.session_state.df_orig is None:
-        st.info("Please upload a CSV on the left to begin.")
-        st.stop()
-
-    # Show prepared data preview
-    if st.session_state.df_features is None:
-        st.info("Select features and click 'Prepare Data' to transform the data.")
-        st.stop()
-
-    st.subheader("Preview of prepared data (features-only)")
-    st.dataframe(st.session_state.df_features.head())
-
-    # Show clustering results if available
-    if st.session_state.clustered is not None:
-        st.subheader("Clustering result (example view)")
-        st.dataframe(st.session_state.clustered.head())
-
-    # Show 3D PCA visualization if clustering done
-    if (st.session_state.X_std is not None) and (st.session_state.clustered is not None):
-        x_pca = pca(st.session_state.X_std, 3)
-        Features = pd.DataFrame(x_pca, columns=["f1", "f2", "f3"])
-        if "clusters" in st.session_state.clustered.columns:
-            Features["cluster"] = st.session_state.clustered["clusters"].astype(str)
-            fig = px.scatter_3d(
-                Features, x="f1", y="f2", z="f3",
-                color=Features["cluster"],
-                title="KMeans Clusters (3D PCA Reduced)",
-                opacity=0.75
-            )
-            fig.update_traces(marker=dict(size=5))
-            st.plotly_chart(fig, use_container_width=True)
-
-    # Show final data (with clusters) if available
-    if st.session_state.final_data is not None:
-        st.subheader("Final data with clusters (preview)")
-        st.dataframe(st.session_state.final_data.head())
+else:
+    st.info("👈 Upload a CSV file from the sidebar to begin.")
