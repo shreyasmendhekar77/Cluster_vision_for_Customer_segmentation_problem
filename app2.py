@@ -3,8 +3,9 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import io
 import plotly.express as px
-from data_preprocessing import clean_data, columns_encode, standard_data, pca
-from model_building_and_clustring import Elbow_method, k_means_cluster, sillhouette_score
+
+from Preprocessing.data_preprocessing import clean_data, columns_encode, standard_data, pca
+from Model_building_Evaluation.model_building_and_clustring import Elbow_method,sillhouette_score,k_means_cluster
 from sklearn.exceptions import ConvergenceWarning
 import warnings
 
@@ -33,6 +34,17 @@ if uploaded_file is not None:
     except Exception as e:
         st.error(f"❌ Failed to read file: {e}")
         st.stop()
+    
+    if st.sidebar.button("👀 Show Data Preview"):
+        st.session_state.show_data_preview = True
+
+    if st.session_state.show_data_preview:
+        st.subheader("👀 Data Preview")
+        st.dataframe(df.head(10))
+
+    if st.sidebar.button("❌ Hide the data preview"):
+        st.session_state.show_data_preview = False
+
 
     final_data = df.copy()
 
@@ -40,17 +52,13 @@ if uploaded_file is not None:
     Features = df.columns.to_list()
     feature_list = st.sidebar.multiselect("Select features for clustering", Features)
 
-    if feature_list:
-        st.session_state.show_data_preview = False
+
 
     st.sidebar.subheader("📌 Clustering Parameters")
     k = st.sidebar.slider("Select Max Number of Clusters (for evaluation)", 2, 20, 5)
 
     # ---------------- Main Area ----------------
-    if st.session_state.show_data_preview:
-        st.subheader("👀 Data Preview")
-        st.dataframe(df.head())
-
+    
     if feature_list:
         # Ensure selected features are numeric
         # if not all(pd.api.types.is_numeric_dtype(df[col]) for col in feature_list):

@@ -22,6 +22,8 @@ def columns_encode(column_list:list,data):
     
     return data
 
+def test_module():
+    print("Module is working fine")
 
 
 def standard_data(data):
